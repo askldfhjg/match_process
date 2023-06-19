@@ -16,7 +16,7 @@ func main() {
 	)
 
 	// Register handler
-	pb.RegisterMatch_processHandler(srv.Server(), new(handler.Match_process))
+	pb.RegisterMatchProcessHandler(srv.Server(), new(handler.Match_process))
 
 	// Run service
 	if err := srv.Run(); err != nil {
