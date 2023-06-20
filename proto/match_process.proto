@@ -5,13 +5,23 @@ package match_process;
 option go_package = "./proto;match_process";
 
 service Match_process {
-	rpc Call(Request) returns (Response) {}
+	rpc MatchTask(MatchTaskReq) returns (MatchTaskRsp) {}
 }
 
-message Request {
-	string name = 1;
+message MatchTaskReq {
+	string taskId = 1; //任务Id
+	string subTaskId = 2; //子任务Id
+	string gameId = 3; //游戏Id
+	int64 subType = 4; //匹配模式Id
+	int64 startPos = 5; //区间开始
+	int64 endPos = 6;   //区间结束
+	string evalGroupId = 7; //后置优化组Id
+	int64 evalGroupTaskCount = 8; //后置优化组内子任务数
+	int64 evalGroupSubId = 9; //后置优化组内子任务Id
+	string evalhaskKey = 10; //后置优化服务器hashstring
 }
 
-message Response {
-	string msg = 1;
+message MatchTaskRsp {
+	int32 code = 1;
+	string err = 2;
 }

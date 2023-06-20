@@ -42,7 +42,7 @@ func NewMatchProcessEndpoints() []*api.Endpoint {
 // Client API for MatchProcess service
 
 type MatchProcessService interface {
-	Call(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error)
+	MatchTask(ctx context.Context, in *MatchTaskReq, opts ...client.CallOption) (*MatchTaskRsp, error)
 }
 
 type matchProcessService struct {
@@ -57,9 +57,9 @@ func NewMatchProcessService(name string, c client.Client) MatchProcessService {
 	}
 }
 
-func (c *matchProcessService) Call(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error) {
-	req := c.c.NewRequest(c.name, "MatchProcess.Call", in)
-	out := new(Response)
+func (c *matchProcessService) MatchTask(ctx context.Context, in *MatchTaskReq, opts ...client.CallOption) (*MatchTaskRsp, error) {
+	req := c.c.NewRequest(c.name, "MatchProcess.MatchTask", in)
+	out := new(MatchTaskRsp)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -70,12 +70,12 @@ func (c *matchProcessService) Call(ctx context.Context, in *Request, opts ...cli
 // Server API for MatchProcess service
 
 type MatchProcessHandler interface {
-	Call(context.Context, *Request, *Response) error
+	MatchTask(context.Context, *MatchTaskReq, *MatchTaskRsp) error
 }
 
 func RegisterMatchProcessHandler(s server.Server, hdlr MatchProcessHandler, opts ...server.HandlerOption) error {
 	type matchProcess interface {
-		Call(ctx context.Context, in *Request, out *Response) error
+		MatchTask(ctx context.Context, in *MatchTaskReq, out *MatchTaskRsp) error
 	}
 	type MatchProcess struct {
 		matchProcess
@@ -88,6 +88,6 @@ type matchProcessHandler struct {
 	MatchProcessHandler
 }
 
-func (h *matchProcessHandler) Call(ctx context.Context, in *Request, out *Response) error {
-	return h.MatchProcessHandler.Call(ctx, in, out)
+func (h *matchProcessHandler) MatchTask(ctx context.Context, in *MatchTaskReq, out *MatchTaskRsp) error {
+	return h.MatchProcessHandler.MatchTask(ctx, in, out)
 }
