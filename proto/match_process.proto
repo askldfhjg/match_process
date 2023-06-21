@@ -20,9 +20,16 @@ message MatchTaskReq {
 	int64 evalGroupSubId = 9; //后置优化组内子任务Id
 	string evalhaskKey = 10; //后置优化服务器hashstring
 	int64 needCount = 11;
+	int64 version = 12;
 }
 
 message MatchTaskRsp {
 	int32 code = 1;
 	string err = 2;
+}
+
+message PoolVersionMsg {
+	string gameId = 1; //游戏Id
+	int64 subType = 2; //匹配模式Id
+	int64 version = 3;
 }
