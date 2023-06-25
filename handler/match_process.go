@@ -3,12 +3,12 @@ package handler
 import (
 	"context"
 	"match_process/internal/db"
+	"match_process/process"
 	match_process "match_process/proto"
 	"math"
 
 	match_evaluator "github.com/askldfhjg/match_apis/match_evaluator/proto"
 	match_frontend "github.com/askldfhjg/match_apis/match_frontend/proto"
-	"github.com/micro/micro/v3/service/client"
 	"github.com/micro/micro/v3/service/logger"
 )
 
@@ -155,12 +155,6 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 		EvalGroupTaskCount: req.EvalGroupTaskCount,
 		EvalGroupSubId:     req.EvalGroupSubId,
 	}
-	evalSrv := match_evaluator.NewMatchEvaluatorService("match_evaluator", client.DefaultClient)
-	evalRsp, err := evalSrv.ToEval(context.Background(), evalReq)
-	if err != nil {
-		logger.Infof("ToEval error %+v", err)
-	} else {
-		logger.Infof("ToEval result %+v", evalRsp)
-	}
+	process.DefaultManager.AddEvalOpt(evalReq, req.EvalhaskKey)
 	return nil
 }

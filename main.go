@@ -4,6 +4,8 @@ import (
 	"match_process/handler"
 	"match_process/internal/db"
 	"match_process/internal/db/redis"
+	"match_process/internal/manager"
+	"match_process/process"
 	pb "match_process/proto"
 
 	"github.com/micro/micro/v3/service"
@@ -12,6 +14,7 @@ import (
 
 func main() {
 	// Create service
+	process.DefaultManager = manager.NewManager()
 	srv := service.New(
 		service.Name("match_process"),
 		service.Version("latest"),
@@ -27,6 +30,8 @@ func main() {
 			db.Default = svr
 			return nil
 		}),
+		service.AfterStart(process.DefaultManager.Start),
+		service.BeforeStop(process.DefaultManager.Stop),
 	)
 
 	// Register handler
