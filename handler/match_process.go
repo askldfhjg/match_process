@@ -1,12 +1,14 @@
 package handler
 
 import (
-	"container/list"
 	"context"
 	"match_process/internal/db"
 	match_process "match_process/proto"
+	"math"
 
+	match_evaluator "github.com/askldfhjg/match_apis/match_evaluator/proto"
 	match_frontend "github.com/askldfhjg/match_apis/match_frontend/proto"
+	"github.com/micro/micro/v3/service/client"
 	"github.com/micro/micro/v3/service/logger"
 )
 
@@ -22,7 +24,7 @@ type matchList struct {
 	result map[string]*match_frontend.MatchInfo
 }
 
-func (m matchList) GetDetail(i int) *match_frontend.MatchInfo {
+func (m *matchList) GetDetail(i int) *match_frontend.MatchInfo {
 	if i >= len(m.list) {
 		return nil
 	}
@@ -46,6 +48,80 @@ func (m matchList) GetDetail(i int) *match_frontend.MatchInfo {
 	return m.result[m.list[i]]
 }
 
+func (m matchList) GetPlayerIds(poss []int) []string {
+	rr := make([]string, len(poss))
+	for idx, pos := range poss {
+		rr[idx] = m.list[pos]
+	}
+	return rr
+}
+
+func (m matchList) CalcScore(poss []int) int64 {
+	return 0
+}
+
+func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, maxCount int, robotCount int, gameId string) ([]*match_evaluator.MatchDetail, []int) {
+	groups := make([]*match_evaluator.MatchDetail, 0, 64)
+	remind := make([]int, 0, 64)
+	currentGroup := make([]int, 0, maxCount)
+	currentGroupMin := math.MaxFloat64
+	currentGroupMax := -1.0
+
+	groupsWithinMaxOffset := func(min float64, max float64, newV float64, maxOffset int) bool {
+		min = math.Min(min, newV)
+		max = math.Max(max, newV)
+		return max-min < float64(maxOffset)
+	}
+
+	processResult := func(tmp []int, mList *matchList, gameId string) *match_evaluator.MatchDetail {
+		ret := &match_evaluator.MatchDetail{
+			Ids:    mList.GetPlayerIds(tmp),
+			GameId: gameId,
+			Score:  mList.CalcScore(tmp),
+		}
+		return ret
+	}
+
+	for _, pos := range playerIds {
+		detail := mList.GetDetail(pos)
+		if detail == nil {
+			continue
+		}
+		score := float64(detail.Score)
+		if len(currentGroup) == 0 {
+			currentGroup = append(currentGroup, pos)
+			currentGroupMin = math.Min(currentGroupMin, score)
+			currentGroupMax = math.Max(currentGroupMax, score)
+		} else if len(currentGroup) < maxCount && groupsWithinMaxOffset(currentGroupMin, currentGroupMax, score, maxOffset) {
+			currentGroup = append(currentGroup, pos)
+			currentGroupMin = math.Min(currentGroupMin, score)
+			currentGroupMax = math.Max(currentGroupMax, score)
+		} else {
+			cc := len(currentGroup)
+			if cc >= maxCount {
+				groups = append(groups, processResult(currentGroup, mList, gameId))
+			} else if cc >= robotCount {
+				groups = append(groups, processResult(currentGroup, mList, gameId))
+			} else {
+				remind = append(remind, currentGroup...)
+			}
+			currentGroup = []int{pos}
+			currentGroupMin = score
+			currentGroupMax = score
+		}
+	}
+
+	cc := len(currentGroup)
+	if cc >= maxCount {
+		groups = append(groups, processResult(currentGroup, mList, gameId))
+	} else if cc >= robotCount {
+		groups = append(groups, processResult(currentGroup, mList, gameId))
+	} else {
+		remind = append(remind, currentGroup...)
+	}
+	return groups, remind
+}
+
 // Call is a single request handler called via client.Call or the generated client code
 func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchTaskReq, rsp *match_process.MatchTaskRsp) error {
 	logger.Info("Received MatchProcess.Call request")
@@ -59,49 +135,32 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 		list:   li,
 		result: make(map[string]*match_frontend.MatchInfo, 32),
 	}
-	stPos := 0
-	edPos := 0
-	isStart := false
-	condition := list.New()
-	for {
-		if !isStart {
-			detail := mList.GetDetail(stPos)
-			if detail == nil {
-				stPos++
-				continue
-			}
-			condition.PushBack(stPos)
-			isStart = true
-			edPos = stPos + 1
-		}
-		detail := mList.GetDetail(edPos)
-		if detail == nil {
-			edPos++
-			continue
-		}
-		if detail.Score-mList.GetDetail(stPos).Score < scoreMaxOffset {
-			laPos := condition.Back().Value.(int)
-			if laPos != edPos {
-				condition.PushBack(edPos)
-			}
-			if condition.Len() >= int(req.NeedCount) {
-				stPos = edPos + 1
-				edPos = stPos
-				isStart = false
-				condition = list.New()
-			} else {
-				edPos++
-			}
-		} else {
-			if condition.Len() > 1 {
-				condition.Remove(condition.Front())
-				stPos = condition.Front().Value.(int)
-			} else {
-				stPos = edPos
-				edPos = stPos
-				isStart = false
-				condition = list.New()
-			}
-		}
+	tmpList := make([]int, len(li))
+	for i := 0; i < len(li); i++ {
+		tmpList[i] = i
 	}
+	ret, remind := groupWithinOffsetAndMaxCount(tmpList, mList, scoreMaxOffset, int(req.NeedCount), int(req.NeedCount), req.GameId)
+	if len(remind) > 0 {
+		ret1, _ := groupWithinOffsetAndMaxCount(remind, mList, scoreMaxOffset*3, int(req.NeedCount), int(float64(req.NeedCount)*0.8), req.GameId)
+		ret = append(ret, ret1...)
+	}
+	evalReq := &match_evaluator.ToEvalReq{
+		Details:            ret,
+		TaskId:             req.TaskId,
+		SubTaskId:          req.SubTaskId,
+		GameId:             req.GameId,
+		SubType:            req.SubType,
+		Version:            req.Version,
+		EvalGroupId:        req.EvalGroupId,
+		EvalGroupTaskCount: req.EvalGroupTaskCount,
+		EvalGroupSubId:     req.EvalGroupSubId,
+	}
+	evalSrv := match_evaluator.NewMatchEvaluatorService("match_evaluator", client.DefaultClient)
+	evalRsp, err := evalSrv.ToEval(context.Background(), evalReq)
+	if err != nil {
+		logger.Infof("ToEval error %+v", err)
+	} else {
+		logger.Infof("ToEval result %+v", evalRsp)
+	}
+	return nil
 }
