@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"match_process/internal/db"
-	"match_process/process"
 	match_process "match_process/proto"
 	"math"
 
@@ -18,7 +17,6 @@ const scoreMaxOffset = 100
 type Match_process struct{}
 
 type matchList struct {
-	ctx     context.Context
 	list    []string
 	index   int
 	result  map[string]*match_frontend.MatchInfo
@@ -39,8 +37,9 @@ func (m *matchList) GetDetail(i int) *match_frontend.MatchInfo {
 		if ed > len(m.list) {
 			ed = len(m.list)
 		}
-		rr, err := db.Default.GetTokenDetail(m.ctx, m.list[st:ed])
-		if err != nil {
+		rr, err := db.Default.GetTokenDetail(context.Background(), m.list[st:ed])
+		//logger.Infof("GetTokenDetail %v", err)
+		if err == nil {
 			m.index = ed
 			for _, info := range rr {
 				if info.GameId == m.gameId && info.SubType == m.subType {
@@ -132,10 +131,11 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 	//rsp.Msg = "Hello " + req.Name
 	li, err := db.Default.GetTokenList(ctx, req)
 	if err != nil {
+		rsp.Code = -1
+		rsp.Err = err.Error()
 		return err
 	}
 	mList := &matchList{
-		ctx:     ctx,
 		list:    li,
 		result:  make(map[string]*match_frontend.MatchInfo, 32),
 		gameId:  req.GameId,
@@ -145,22 +145,26 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 	for i := 0; i < len(li); i++ {
 		tmpList[i] = i
 	}
-	ret, remind := groupWithinOffsetAndMaxCount(tmpList, mList, scoreMaxOffset, int(req.NeedCount), int(req.NeedCount), req.GameId)
-	if len(remind) > 0 {
-		ret1, _ := groupWithinOffsetAndMaxCount(remind, mList, scoreMaxOffset*3, int(req.NeedCount), int(float64(req.NeedCount)*0.8), req.GameId)
-		ret = append(ret, ret1...)
-	}
-	evalReq := &match_evaluator.ToEvalReq{
-		Details:            ret,
-		TaskId:             req.TaskId,
-		SubTaskId:          req.SubTaskId,
-		GameId:             req.GameId,
-		SubType:            req.SubType,
-		Version:            req.Version,
-		EvalGroupId:        req.EvalGroupId,
-		EvalGroupTaskCount: req.EvalGroupTaskCount,
-		EvalGroupSubId:     req.EvalGroupSubId,
-	}
-	process.DefaultManager.AddEvalOpt(evalReq, req.EvalhaskKey)
+	go func() {
+		ret, remind := groupWithinOffsetAndMaxCount(tmpList, mList, scoreMaxOffset, int(req.NeedCount), int(req.NeedCount), req.GameId)
+		if len(remind) > 0 {
+			ret1, _ := groupWithinOffsetAndMaxCount(remind, mList, scoreMaxOffset*3, int(req.NeedCount), int(float64(req.NeedCount)*0.8), req.GameId)
+			ret = append(ret, ret1...)
+		}
+		logger.Infof("process %v %v ok count %v", req.EvalGroupId, req.EvalGroupSubId, len(ret))
+		// evalReq := &match_evaluator.ToEvalReq{
+		// 	Details:            ret,
+		// 	TaskId:             req.TaskId,
+		// 	SubTaskId:          req.SubTaskId,
+		// 	GameId:             req.GameId,
+		// 	SubType:            req.SubType,
+		// 	Version:            req.Version,
+		// 	EvalGroupId:        req.EvalGroupId,
+		// 	EvalGroupTaskCount: req.EvalGroupTaskCount,
+		// 	EvalGroupSubId:     req.EvalGroupSubId,
+		// }
+		// process.DefaultManager.AddEvalOpt(evalReq, req.EvalhaskKey)
+	}()
+
 	return nil
 }
