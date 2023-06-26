@@ -85,7 +85,7 @@ func (m *defaultMgr) initWatch() {
 	m.watcher = watcher
 	svrList, errs := registry.DefaultRegistry.GetService("match_evaluator", registry.GetDomain(os.Getenv("MICRO_NAMESPACE")))
 	if errs != nil {
-		logger.Infof("initwatch GetService error %s", err.Error())
+		logger.Infof("initwatch GetService error %s", errs.Error())
 	}
 	for _, srv := range svrList {
 		for _, node := range srv.Nodes {

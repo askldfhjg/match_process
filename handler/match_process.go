@@ -18,10 +18,12 @@ const scoreMaxOffset = 100
 type Match_process struct{}
 
 type matchList struct {
-	ctx    context.Context
-	list   []string
-	index  int
-	result map[string]*match_frontend.MatchInfo
+	ctx     context.Context
+	list    []string
+	index   int
+	result  map[string]*match_frontend.MatchInfo
+	gameId  string
+	subType int64
 }
 
 func (m *matchList) GetDetail(i int) *match_frontend.MatchInfo {
@@ -41,7 +43,9 @@ func (m *matchList) GetDetail(i int) *match_frontend.MatchInfo {
 		if err != nil {
 			m.index = ed
 			for _, info := range rr {
-				m.result[info.PlayerId] = info
+				if info.GameId == m.gameId && info.SubType == m.subType {
+					m.result[info.PlayerId] = info
+				}
 			}
 		}
 	}
@@ -131,9 +135,11 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 		return err
 	}
 	mList := &matchList{
-		ctx:    ctx,
-		list:   li,
-		result: make(map[string]*match_frontend.MatchInfo, 32),
+		ctx:     ctx,
+		list:    li,
+		result:  make(map[string]*match_frontend.MatchInfo, 32),
+		gameId:  req.GameId,
+		subType: req.SubType,
 	}
 	tmpList := make([]int, len(li))
 	for i := 0; i < len(li); i++ {
