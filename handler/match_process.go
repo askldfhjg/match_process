@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"match_process/internal/db"
+	"match_process/process"
 	match_process "match_process/proto"
 	"math"
 
@@ -152,18 +153,18 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 			ret = append(ret, ret1...)
 		}
 		logger.Infof("process %v %v ok count %v", req.EvalGroupId, req.EvalGroupSubId, len(ret))
-		// evalReq := &match_evaluator.ToEvalReq{
-		// 	Details:            ret,
-		// 	TaskId:             req.TaskId,
-		// 	SubTaskId:          req.SubTaskId,
-		// 	GameId:             req.GameId,
-		// 	SubType:            req.SubType,
-		// 	Version:            req.Version,
-		// 	EvalGroupId:        req.EvalGroupId,
-		// 	EvalGroupTaskCount: req.EvalGroupTaskCount,
-		// 	EvalGroupSubId:     req.EvalGroupSubId,
-		// }
-		// process.DefaultManager.AddEvalOpt(evalReq, req.EvalhaskKey)
+		evalReq := &match_evaluator.ToEvalReq{
+			Details:            ret,
+			TaskId:             req.TaskId,
+			SubTaskId:          req.SubTaskId,
+			GameId:             req.GameId,
+			SubType:            req.SubType,
+			Version:            req.Version,
+			EvalGroupId:        req.EvalGroupId,
+			EvalGroupTaskCount: req.EvalGroupTaskCount,
+			EvalGroupSubId:     req.EvalGroupSubId,
+		}
+		process.DefaultManager.AddEvalOpt(evalReq, req.EvalhaskKey)
 	}()
 
 	return nil
