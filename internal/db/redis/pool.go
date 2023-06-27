@@ -17,6 +17,7 @@ import (
 const (
 	allTickets = "allTickets:%s:%d"
 	ticketKey  = "ticket:%s"
+	hashKey    = "hashkey:%s"
 )
 
 func New(opts ...db.Option) (db.Service, error) {

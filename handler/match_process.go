@@ -6,6 +6,7 @@ import (
 	"match_process/process"
 	match_process "match_process/proto"
 	"math"
+	"time"
 
 	match_evaluator "github.com/askldfhjg/match_apis/match_evaluator/proto"
 	match_frontend "github.com/askldfhjg/match_apis/match_frontend/proto"
@@ -145,7 +146,7 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchTaskReq, rsp *match_process.MatchTaskRsp) error {
 	logger.Info("Received MatchProcess.Call request")
 	//rsp.Msg = "Hello " + req.Name
-	li, err := db.Default.GetTokenList(ctx, req)
+	li, err := db.Default.GetTokenList(context.Background(), req)
 	if err != nil {
 		rsp.Code = -1
 		rsp.Err = err.Error()
@@ -167,7 +168,7 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 			ret1, _ := groupWithinOffsetAndMaxCount(remind, mList, scoreMaxOffset*3, int(req.NeedCount), int(float64(req.NeedCount)*0.8), req.GameId)
 			ret = append(ret, ret1...)
 		}
-		logger.Infof("process %v %v ok count %v", req.EvalGroupId, req.EvalGroupSubId, len(ret))
+		logger.Infof("process %v %v ok count %v timer %v", req.EvalGroupId, req.EvalGroupSubId, len(ret), time.Now().UnixNano()/1e6)
 		evalReq := &match_evaluator.ToEvalReq{
 			Details:            ret,
 			TaskId:             req.TaskId,

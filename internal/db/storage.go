@@ -20,6 +20,7 @@ type Service interface {
 	GetQueueCount(ctx context.Context, gameId string, subType int64) (int, error)
 	GetTokenList(ctx context.Context, info *match_process.MatchTaskReq) ([]string, error)
 	GetTokenDetail(ctx context.Context, ids []string) ([]*match_frontend.MatchInfo, error)
+	SetEvalUrl(ctx context.Context, hashkey string, url string) (string, error)
 }
 
 type MatchInfo struct {

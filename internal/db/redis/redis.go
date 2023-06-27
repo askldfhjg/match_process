@@ -150,3 +150,27 @@ func (m *redisBackend) GetTokenDetail(ctx context.Context, ids []string) ([]*mat
 	}
 	return r, nil
 }
+
+func (m *redisBackend) SetEvalUrl(ctx context.Context, hashkey string, url string) (string, error) {
+	redisConn, err := m.redisPool.GetContext(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer handleConnectionClose(&redisConn)
+
+	script := `local oldV = redis.call('GET', KEYS[1])
+	if(not oldV) then
+		redis.call('SET', KEYS[1], ARGV[1], 'EX', 10)
+		return ARGV[1]
+	else
+		return oldV
+	end
+	`
+	args := []interface{}{url}
+	keys := []interface{}{fmt.Sprintf(hashKey, hashkey)}
+	params := []interface{}{script, len(keys)}
+	params = append(params, keys...)
+	params = append(params, args...)
+	logger.Info("%+v", params)
+	return redis.String(redisConn.Do("EVAL", params...))
+}

@@ -18,9 +18,13 @@ limitations under the License.
 package consistenthash
 
 import (
+	"context"
 	"hash/crc32"
+	"match_process/internal/db"
 	"sort"
 	"strconv"
+
+	"github.com/micro/micro/v3/service/logger"
 )
 
 type Hash func(data []byte) uint32
@@ -101,6 +105,12 @@ func (m *HashRing) Get(key string) string {
 	if idx == len(m.keys) {
 		idx = 0
 	}
-
-	return m.hashMap[m.keys[idx]]
+	retKey := m.hashMap[m.keys[idx]]
+	ret, err := db.Default.SetEvalUrl(context.Background(), key, retKey)
+	if err == nil {
+		return ret
+	} else {
+		logger.Errorf("ring get error %s", err.Error())
+		return m.hashMap[m.keys[0]]
+	}
 }
