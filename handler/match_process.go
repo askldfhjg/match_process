@@ -61,7 +61,22 @@ func (m matchList) GetPlayerIds(poss []int) []string {
 }
 
 func (m matchList) CalcScore(poss []int) int64 {
-	return 0
+	currentGroupMin := math.MaxFloat64
+	currentGroupMax := -1.0
+	for _, pos := range poss {
+		detail := m.GetDetail(pos)
+		if detail == nil {
+			continue
+		}
+		score := float64(detail.Score)
+		currentGroupMin = math.Min(currentGroupMin, score)
+		currentGroupMax = math.Max(currentGroupMax, score)
+	}
+	ret := currentGroupMax - currentGroupMin
+	if ret < 0 {
+		ret = 0
+	}
+	return int64(ret)
 }
 
 func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, maxCount int, robotCount int, gameId string) ([]*match_evaluator.MatchDetail, []int) {
