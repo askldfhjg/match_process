@@ -125,7 +125,8 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 			} else {
 				remind = append(remind, currentGroup...)
 			}
-			currentGroup = []int{pos}
+			currentGroup = make([]int, 1, maxCount)
+			currentGroup[0] = pos
 			currentGroupMin = score
 			currentGroupMax = score
 		}
