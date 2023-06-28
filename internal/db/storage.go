@@ -14,10 +14,6 @@ type Service interface {
 	Init(ctx context.Context, opts ...Option) error
 	Close(ctx context.Context) error
 	String() string
-	AddToken(ctx context.Context, info *match_frontend.MatchInfo) error
-	RemoveToken(ctx context.Context, playerId string, gameId string, subType int64) error
-	GetToken(ctx context.Context, playerId string) (*match_frontend.MatchInfo, error)
-	GetQueueCount(ctx context.Context, gameId string, subType int64) (int, error)
 	GetTokenList(ctx context.Context, info *match_process.MatchTaskReq) ([]string, error)
 	GetTokenDetail(ctx context.Context, ids []string) ([]*match_frontend.MatchInfo, error)
 	SetEvalUrl(ctx context.Context, hashkey string, url string) (string, error)
