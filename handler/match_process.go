@@ -13,7 +13,7 @@ import (
 	"github.com/micro/micro/v3/service/logger"
 )
 
-const detailOnceGetCount = 100
+const detailOnceGetCount = 200
 const scoreMaxOffset = 100
 
 type Match_process struct{}
@@ -24,14 +24,15 @@ type matchList struct {
 	result  map[string]*match_frontend.MatchInfo
 	gameId  string
 	subType int64
+	SubId   int64
 }
 
 func (m *matchList) GetDetail(i int) *match_frontend.MatchInfo {
 	if i >= len(m.list) {
 		return nil
 	}
-	if i >= m.index-10 {
-		st := m.index - 10
+	if i >= m.index {
+		st := m.index
 		if st < 0 {
 			st = 0
 		}
@@ -41,13 +42,33 @@ func (m *matchList) GetDetail(i int) *match_frontend.MatchInfo {
 		}
 		rr, err := db.Default.GetTokenDetail(context.Background(), m.list[st:ed])
 		//logger.Infof("GetTokenDetail %v", err)
+		deleteIds := make([]string, 0, 64)
+		m.index = ed
 		if err == nil {
-			m.index = ed
 			for _, info := range rr {
 				if info.GameId == m.gameId && info.SubType == m.subType {
 					m.result[info.PlayerId] = info
 				}
 			}
+			for _, idd := range m.list[st:ed] {
+				if _, ok := m.result[idd]; !ok {
+					deleteIds = append(deleteIds, idd)
+				}
+			}
+			if len(deleteIds) > 0 {
+				logger.Infof("GetDetail %s %d %d remove miss count %d range %d %d", m.gameId, m.subType, m.SubId, len(deleteIds), st, ed)
+				_, err := db.Default.RemoveMissTokens(context.Background(), deleteIds, m.gameId, m.subType)
+				if err != nil {
+					logger.Errorf("GetDetail %s %d $d remove miss have error %s", m.gameId, m.subType, m.SubId, err.Error())
+				}
+				// else {
+				// 	if deleteCount != len(deleteIds) {
+				// 		logger.Errorf("GetDetail %s %d %d remove miss delete not match %d %d range %d %d", m.gameId, m.subType, m.SubId, deleteCount, len(deleteIds), st, ed)
+				// 	}
+				// }
+			}
+		} else {
+			logger.Errorf("GetDetail redis error %s", err.Error())
 		}
 	}
 	return m.result[m.list[i]]
@@ -158,6 +179,7 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 		result:  make(map[string]*match_frontend.MatchInfo, 32),
 		gameId:  req.GameId,
 		subType: req.SubType,
+		SubId:   req.EvalGroupSubId,
 	}
 	tmpList := make([]int, len(li))
 	for i := 0; i < len(li); i++ {

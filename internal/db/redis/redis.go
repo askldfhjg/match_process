@@ -89,3 +89,18 @@ func (m *redisBackend) SetEvalUrl(ctx context.Context, hashkey string, url strin
 	params = append(params, args...)
 	return redis.String(redisConn.Do("EVAL", params...))
 }
+
+func (m *redisBackend) RemoveMissTokens(ctx context.Context, playerIds []string, gameId string, subType int64) (int, error) {
+	redisConn, err := m.redisPool.GetContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer handleConnectionClose(&redisConn)
+	zsetKey := fmt.Sprintf(allTickets, gameId, subType)
+	inter2 := make([]interface{}, 0, len(playerIds))
+	inter2 = append(inter2, zsetKey)
+	for _, ply := range playerIds {
+		inter2 = append(inter2, ply)
+	}
+	return redis.Int(redisConn.Do("ZREM", inter2...))
+}

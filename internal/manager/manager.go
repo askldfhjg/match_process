@@ -131,10 +131,10 @@ func (m *defaultMgr) loop() {
 
 func (m *defaultMgr) sendEvalReq(req *match_evaluator.ToEvalReq, addr string) {
 	evalSrv := match_evaluator.NewMatchEvaluatorService("match_evaluator", client.DefaultClient)
-	evalRsp, err := evalSrv.ToEval(context.Background(), req, client.WithAddress(addr))
+	_, err := evalSrv.ToEval(context.Background(), req, client.WithAddress(addr))
 	if err != nil {
 		logger.Infof("ToEval error %+v", err)
 	} else {
-		logger.Infof("ToEval result %+v", evalRsp)
+		//logger.Infof("ToEval result %+v", evalRsp)
 	}
 }
