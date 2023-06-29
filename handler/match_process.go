@@ -166,7 +166,7 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 
 // Call is a single request handler called via client.Call or the generated client code
 func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchTaskReq, rsp *match_process.MatchTaskRsp) error {
-	logger.Info("Received MatchProcess.Call request")
+	//logger.Info("Received MatchProcess.Call request")
 	//rsp.Msg = "Hello " + req.Name
 	li, err := db.Default.GetTokenList(context.Background(), req)
 	if err != nil {
