@@ -44,8 +44,6 @@ github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5/go.mod h1
 github.com/apache/thrift v0.12.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
 github.com/askldfhjg/match_apis/match_evaluator/proto v0.0.0-20230625013443-20f13b1c45f1 h1:0kdSHj+kqZDjee4vOb9zNeChqPyEsGDu0ANzesQ3rEI=
 github.com/askldfhjg/match_apis/match_evaluator/proto v0.0.0-20230625013443-20f13b1c45f1/go.mod h1:HDt92+71VXbhgiWcRYyfVS4295hjGsja7YuQHZP5LI4=
-github.com/askldfhjg/match_apis/match_frontend/proto v0.0.0-20230625013443-20f13b1c45f1 h1:NS1O+kslRTqAueU4qy75eRHVcKIF7AnpW+EwI1YC4H4=
-github.com/askldfhjg/match_apis/match_frontend/proto v0.0.0-20230625013443-20f13b1c45f1/go.mod h1:0NM2zxkWI7kAe/LnIbF+YN6M6fo3iEBtOdH3AAx80bo=
 github.com/askldfhjg/micro/v3 v3.5.0 h1:+5x/xpXfUXMb4qa70L498/kgtBc35Iq+F60pHI1Kilw=
 github.com/askldfhjg/micro/v3 v3.5.0/go.mod h1:fjM05rgV6dv4tdIKGqXTX3dQUNlzIbN88GlPwXWPBws=
 github.com/aws/aws-sdk-go v1.23.0/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
@@ -65,8 +63,9 @@ github.com/caddyserver/certmagic v0.10.6/go.mod h1:Y8jcUBctgk/IhpAzlHKfimZNyXCkf
 github.com/cenkalti/backoff/v4 v4.0.0/go.mod h1:eEew/i+1Q6OrCDZh3WiXYv3+nJwBASZ8Bog/87DQnVg=
 github.com/census-instrumentation/opencensus-proto v0.2.0/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
-github.com/cespare/xxhash/v2 v2.1.1 h1:6MnRN8NT7+YBpUIWxHtefFZOKTAPgGjpQSxqLNn0+qY=
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
+github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=
+github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=

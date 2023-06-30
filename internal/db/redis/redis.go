@@ -1,18 +1,23 @@
 package redis
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	match_process "match_process/proto"
-
-	match_frontend "github.com/askldfhjg/match_apis/match_frontend/proto"
+	"match_process/utils"
 
 	"github.com/gomodule/redigo/redis"
-	"google.golang.org/protobuf/proto"
 )
 
-func (m *redisBackend) GetTokenList(ctx context.Context, info *match_process.MatchTaskReq) ([]string, error) {
+const (
+	allTickets = "allTickets:%s:%d"
+	ticketKey  = "ticket:"
+	hashKey    = "hashkey:"
+)
+
+func (m *redisBackend) GetTokenList(ctx context.Context, info *match_process.MatchTaskReq) ([]interface{}, error) {
 	redisConn, err := m.redisPool.GetContext(ctx)
 	if err != nil {
 		return nil, err
@@ -20,22 +25,14 @@ func (m *redisBackend) GetTokenList(ctx context.Context, info *match_process.Mat
 	defer handleConnectionClose(&redisConn)
 
 	zsetKey := fmt.Sprintf(allTickets, info.GameId, info.SubType)
-	reply, err := redisConn.Do("ZRANGE", zsetKey, info.StartPos-1, info.EndPos-1)
+	reply, err := redisConn.Do("ZRANGE", zsetKey, info.StartPos-1, info.EndPos-1, "WITHSCORES")
 	if err == redis.ErrNil {
 		return nil, nil
 	}
-	v, err := redis.Values(reply, err)
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]string, 0)
-	if err = redis.ScanSlice(v, &ids); err != nil {
-		return nil, err
-	}
-	return ids, nil
+	return reply.([]interface{}), nil
 }
 
-func (m *redisBackend) GetTokenDetail(ctx context.Context, ids []string) ([]*match_frontend.MatchInfo, error) {
+func (m *redisBackend) GetTokenDetail(ctx context.Context, ids []string) ([]interface{}, error) {
 	redisConn, err := m.redisPool.GetContext(ctx)
 	if err != nil {
 		return nil, err
@@ -43,28 +40,23 @@ func (m *redisBackend) GetTokenDetail(ctx context.Context, ids []string) ([]*mat
 	defer handleConnectionClose(&redisConn)
 
 	queryParams := make([]interface{}, len(ids))
+	tmps := make([]*bytes.Buffer, len(ids))
 	for i, id := range ids {
-		queryParams[i] = fmt.Sprintf(ticketKey, id)
+		by := utils.GetBytes()
+		by.WriteString(ticketKey)
+		by.WriteString(id)
+		bbb := utils.Bytes2string(by.Bytes())
+		queryParams[i] = bbb
+		tmps[i] = by
 	}
-
-	ticketBytes, err := redis.ByteSlices(redisConn.Do("MGET", queryParams...))
-
+	queryParams, err = redis.Values(redisConn.Do("MGET", queryParams...))
 	if err != nil {
 		return nil, err
 	}
-
-	r := make([]*match_frontend.MatchInfo, 0, len(queryParams))
-	for _, b := range ticketBytes {
-		if b != nil {
-			t := &match_frontend.MatchInfo{}
-			err = proto.Unmarshal(b, t)
-			if err != nil {
-				continue
-			}
-			r = append(r, t)
-		}
+	for _, it := range tmps {
+		utils.PutBytes(it)
 	}
-	return r, nil
+	return queryParams, nil
 }
 
 func (m *redisBackend) SetEvalUrl(ctx context.Context, hashkey string, url string) (string, error) {
@@ -97,10 +89,11 @@ func (m *redisBackend) RemoveMissTokens(ctx context.Context, playerIds []string,
 	}
 	defer handleConnectionClose(&redisConn)
 	zsetKey := fmt.Sprintf(allTickets, gameId, subType)
-	inter2 := make([]interface{}, 0, len(playerIds))
-	inter2 = append(inter2, zsetKey)
-	for _, ply := range playerIds {
-		inter2 = append(inter2, ply)
+
+	inter2 := make([]interface{}, len(playerIds)+1)
+	inter2[0] = zsetKey
+	for pos, ply := range playerIds {
+		inter2[pos+1] = ply
 	}
 	return redis.Int(redisConn.Do("ZREM", inter2...))
 }

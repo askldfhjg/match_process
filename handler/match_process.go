@@ -2,34 +2,89 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"match_process/internal/db"
 	"match_process/process"
 	match_process "match_process/proto"
+	"match_process/utils"
 	"math"
+	"strconv"
 	"time"
 
 	match_evaluator "github.com/askldfhjg/match_apis/match_evaluator/proto"
-	match_frontend "github.com/askldfhjg/match_apis/match_frontend/proto"
 	"github.com/micro/micro/v3/service/logger"
 )
 
-const detailOnceGetCount = 200
+const detailOnceGetCount = 300
 const scoreMaxOffset = 100
 
 type Match_process struct{}
 
 type matchList struct {
-	list    []string
-	index   int
-	result  map[string]*match_frontend.MatchInfo
-	gameId  string
-	subType int64
-	SubId   int64
+	list     []string
+	scoreMap map[string]float64
+	index    int
+	result   map[string]bool
+	gameId   string
+	subType  int64
+	SubId    int64
+	nowMatch string
 }
 
-func (m *matchList) GetDetail(i int) *match_frontend.MatchInfo {
+func newMatchList(req *match_process.MatchTaskReq) (*matchList, error) {
+	li, err := db.Default.GetTokenList(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	allCount := len(li)
+	playerList := make([]string, 0, allCount/2+1)
+	scoreMap := make(map[string]float64, allCount/2+1)
+	index := 0
+	for {
+		if index+1 >= allCount {
+			break
+		}
+		s1, ok := li[index].([]byte)
+		if !ok {
+			index += 2
+			continue
+		}
+		s2, ok := li[index+1].([]byte)
+		if !ok {
+			index += 2
+			continue
+		}
+		playerId := utils.Bytes2string(s1)
+		scoreStr := utils.Bytes2string(s2)
+		score, err := strconv.ParseInt(scoreStr, 10, 64)
+		if err == nil {
+			playerList = append(playerList, playerId)
+			scoreMap[playerId] = float64(score)
+		}
+		index += 2
+	}
+	// for _, info := range li {
+	// 	playerId := info.Member.(string)
+	// 	score := info.Score
+	// 	playerList = append(playerList, playerId)
+	// 	scoreMap[playerId] = score
+	// }
+
+	return &matchList{
+		list:     playerList,
+		scoreMap: scoreMap,
+		result:   make(map[string]bool, allCount/2+1),
+		gameId:   req.GameId,
+		subType:  req.SubType,
+		SubId:    req.EvalGroupSubId,
+		nowMatch: fmt.Sprintf("%s:%d", req.GameId, req.SubType),
+	}, nil
+}
+
+func (m *matchList) GetDetail(i int) (float64, bool) {
 	if i >= len(m.list) {
-		return nil
+		return 0, false
 	}
 	if i >= m.index {
 		st := m.index
@@ -41,17 +96,24 @@ func (m *matchList) GetDetail(i int) *match_frontend.MatchInfo {
 			ed = len(m.list)
 		}
 		rr, err := db.Default.GetTokenDetail(context.Background(), m.list[st:ed])
-		//logger.Infof("GetTokenDetail %v", err)
+		//logger.Infof("GetTokenDetail %d %d", st, ed)
 		deleteIds := make([]string, 0, 64)
+		//var deleteIds []string
 		m.index = ed
 		if err == nil {
-			for _, info := range rr {
-				if info.GameId == m.gameId && info.SubType == m.subType {
-					m.result[info.PlayerId] = info
+			for pos, idd := range m.list[st:ed] {
+				infer := rr[pos]
+				if infer == nil {
+					continue
 				}
-			}
-			for _, idd := range m.list[st:ed] {
-				if _, ok := m.result[idd]; !ok {
+				str, ok := rr[pos].([]byte)
+				if !ok {
+					continue
+				}
+				matchInfo := utils.Bytes2string(str)
+				if matchInfo == m.nowMatch {
+					m.result[idd] = true
+				} else {
 					deleteIds = append(deleteIds, idd)
 				}
 			}
@@ -71,7 +133,12 @@ func (m *matchList) GetDetail(i int) *match_frontend.MatchInfo {
 			logger.Errorf("GetDetail redis error %s", err.Error())
 		}
 	}
-	return m.result[m.list[i]]
+	item := m.list[i]
+	return m.scoreMap[item], m.result[item]
+}
+
+func (m matchList) Count() int {
+	return len(m.list)
 }
 
 func (m matchList) GetPlayerIds(poss []int) []string {
@@ -86,11 +153,10 @@ func (m matchList) CalcScore(poss []int) int64 {
 	currentGroupMin := math.MaxFloat64
 	currentGroupMax := -1.0
 	for _, pos := range poss {
-		detail := m.GetDetail(pos)
-		if detail == nil {
+		score, ok := m.GetDetail(pos)
+		if !ok {
 			continue
 		}
-		score := float64(detail.Score)
 		currentGroupMin = math.Min(currentGroupMin, score)
 		currentGroupMax = math.Max(currentGroupMax, score)
 	}
@@ -104,7 +170,7 @@ func (m matchList) CalcScore(poss []int) int64 {
 func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, maxCount int, robotCount int, gameId string) ([]*match_evaluator.MatchDetail, []int) {
 	groups := make([]*match_evaluator.MatchDetail, 0, 64)
 	remind := make([]int, 0, 64)
-	currentGroup := make([]int, 0, maxCount)
+	currentGroup := utils.GetIntSlice()
 	currentGroupMin := math.MaxFloat64
 	currentGroupMax := -1.0
 
@@ -124,11 +190,10 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 	}
 
 	for _, pos := range playerIds {
-		detail := mList.GetDetail(pos)
-		if detail == nil {
+		score, ok := mList.GetDetail(pos)
+		if !ok {
 			continue
 		}
-		score := float64(detail.Score)
 		if len(currentGroup) == 0 {
 			currentGroup = append(currentGroup, pos)
 			currentGroupMin = math.Min(currentGroupMin, score)
@@ -146,8 +211,8 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 			} else {
 				remind = append(remind, currentGroup...)
 			}
-			currentGroup = make([]int, 1, maxCount)
-			currentGroup[0] = pos
+			currentGroup = currentGroup[:0]
+			currentGroup = append(currentGroup, pos)
 			currentGroupMin = score
 			currentGroupMax = score
 		}
@@ -161,28 +226,22 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 	} else {
 		remind = append(remind, currentGroup...)
 	}
+	utils.PutIntSlice(&currentGroup)
 	return groups, remind
 }
 
 // Call is a single request handler called via client.Call or the generated client code
 func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchTaskReq, rsp *match_process.MatchTaskRsp) error {
 	//logger.Info("Received MatchProcess.Call request")
-	//rsp.Msg = "Hello " + req.Name
-	li, err := db.Default.GetTokenList(context.Background(), req)
+	mList, err := newMatchList(req)
 	if err != nil {
 		rsp.Code = -1
 		rsp.Err = err.Error()
 		return err
 	}
-	mList := &matchList{
-		list:    li,
-		result:  make(map[string]*match_frontend.MatchInfo, 32),
-		gameId:  req.GameId,
-		subType: req.SubType,
-		SubId:   req.EvalGroupSubId,
-	}
-	tmpList := make([]int, len(li))
-	for i := 0; i < len(li); i++ {
+	cc := mList.Count()
+	tmpList := make([]int, cc)
+	for i := 0; i < cc; i++ {
 		tmpList[i] = i
 	}
 	go func() {
