@@ -5,6 +5,7 @@ import (
 	"match_process/internal/consistenthash"
 	"match_process/process"
 	"os"
+	"sync"
 
 	match_evaluator "github.com/askldfhjg/match_apis/match_evaluator/proto"
 
@@ -20,6 +21,7 @@ func NewManager(opts ...process.ProcessOption) process.Manager {
 		ring:        consistenthash.New(10, nil),
 		nodeChannel: make(chan *nodeChangeOpt, 2000),
 		evalChannel: make(chan *evalOpt, 2000),
+		ringLock:    &sync.RWMutex{},
 	}
 	for _, o := range opts {
 		o(&m.opts)
@@ -48,6 +50,7 @@ type defaultMgr struct {
 	ring        *consistenthash.HashRing
 	nodeChannel chan *nodeChangeOpt
 	evalChannel chan *evalOpt
+	ringLock    *sync.RWMutex
 }
 
 func (m *defaultMgr) serviceWatch() {
@@ -108,7 +111,11 @@ func (m *defaultMgr) Stop() error {
 }
 
 func (m *defaultMgr) AddEvalOpt(req *match_evaluator.ToEvalReq, key string) {
-	m.evalChannel <- &evalOpt{Req: req, Key: key}
+	m.ringLock.RLock()
+	addr := m.ring.Get(key)
+	m.ringLock.RUnlock()
+	m.sendEvalReq(req, addr)
+	//m.evalChannel <- &evalOpt{Req: req, Key: key}
 }
 
 func (m *defaultMgr) loop() {
@@ -116,15 +123,17 @@ func (m *defaultMgr) loop() {
 		select {
 		case <-m.exited:
 			return
-		case evalOpt := <-m.evalChannel:
-			addr := m.ring.Get(evalOpt.Key)
-			go m.sendEvalReq(evalOpt.Req, addr)
+		// case evalOpt := <-m.evalChannel:
+		// 	addr := m.ring.Get(evalOpt.Key)
+		// 	go m.sendEvalReq(evalOpt.Req, addr)
 		case opt := <-m.nodeChannel:
+			m.ringLock.Lock()
 			if opt.Opt == NodeOptUpdate {
 				m.ring.Add(opt.Address)
 			} else if opt.Opt == NodeOptDelete {
 				m.ring.Remove(opt.Address)
 			}
+			m.ringLock.Unlock()
 		}
 	}
 }
