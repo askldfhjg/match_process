@@ -95,15 +95,3 @@ func TestMatchTask(t *testing.T) {
 	rsp := &match_process.MatchTaskRsp{}
 	handler.MatchTask(ctx, req, rsp)
 }
-
-func BenchmarkMatchTask2(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		MatchTask2()
-	}
-}
-
-func BenchmarkMatchTask3(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		MatchTask3()
-	}
-}

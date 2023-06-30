@@ -170,7 +170,7 @@ func (m matchList) CalcScore(poss []int) int64 {
 func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, maxCount int, robotCount int, gameId string) ([]*match_evaluator.MatchDetail, []int) {
 	groups := make([]*match_evaluator.MatchDetail, 0, 64)
 	remind := make([]int, 0, 64)
-	currentGroup := utils.GetIntSlice()
+	currentGroup := make([]int, 0, maxCount)
 	currentGroupMin := math.MaxFloat64
 	currentGroupMax := -1.0
 
@@ -226,7 +226,6 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 	} else {
 		remind = append(remind, currentGroup...)
 	}
-	utils.PutIntSlice(&currentGroup)
 	return groups, remind
 }
 
