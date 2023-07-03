@@ -232,6 +232,7 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 // Call is a single request handler called via client.Call or the generated client code
 func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchTaskReq, rsp *match_process.MatchTaskRsp) error {
 	//logger.Info("Received MatchProcess.Call request")
+	st := time.Now().UnixNano() / 1e6
 	mList, err := newMatchList(req)
 	if err != nil {
 		rsp.Code = -1
@@ -258,7 +259,8 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 			ret1, _ := groupWithinOffsetAndMaxCount(remind, mList, scoreMaxOffset*3, int(req.NeedCount), int(float64(req.NeedCount)*0.8), req.GameId)
 			ret = append(ret, ret1...)
 		}
-		logger.Infof("process %v %v ok count %v timer %v", req.EvalGroupId, req.EvalGroupSubId, len(ret), time.Now().UnixNano()/1e6)
+		now := time.Now().UnixNano() / 1e6
+		logger.Infof("process %s %d ok count %d timer %d %d", req.EvalGroupId, req.EvalGroupSubId, len(ret), now, now-st)
 		evalReq := &match_evaluator.ToEvalReq{
 			Details:            ret,
 			TaskId:             req.TaskId,
