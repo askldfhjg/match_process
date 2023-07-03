@@ -3,7 +3,7 @@ module match_process
 go 1.15
 
 require (
-	github.com/askldfhjg/match_apis/match_evaluator/proto v0.0.0-20230625013443-20f13b1c45f1
+	github.com/askldfhjg/match_apis/match_evaluator/proto v0.0.0-20230703025745-2a41819c10e6
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/golang/protobuf v1.4.3
 	github.com/gomodule/redigo v1.8.9

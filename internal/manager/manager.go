@@ -114,8 +114,15 @@ func (m *defaultMgr) AddEvalOpt(req *match_evaluator.ToEvalReq, key string) {
 	m.ringLock.RLock()
 	addr := m.ring.Get(key)
 	m.ringLock.RUnlock()
-	m.sendEvalReq(req, addr)
+	go m.sendEvalReq(req, addr)
 	//m.evalChannel <- &evalOpt{Req: req, Key: key}
+}
+
+func (m *defaultMgr) AddEvalReadyOpt(req *match_evaluator.ToEvalReadyReq, key string) {
+	m.ringLock.RLock()
+	addr := m.ring.Get(key)
+	m.ringLock.RUnlock()
+	go m.sendEvalReadyReq(req, addr)
 }
 
 func (m *defaultMgr) loop() {
@@ -143,6 +150,16 @@ func (m *defaultMgr) sendEvalReq(req *match_evaluator.ToEvalReq, addr string) {
 	_, err := evalSrv.ToEval(context.Background(), req, client.WithAddress(addr))
 	if err != nil {
 		logger.Infof("ToEval error %+v", err)
+	} else {
+		//logger.Infof("ToEval result %+v", evalRsp)
+	}
+}
+
+func (m *defaultMgr) sendEvalReadyReq(req *match_evaluator.ToEvalReadyReq, addr string) {
+	evalSrv := match_evaluator.NewMatchEvaluatorService("match_evaluator", client.DefaultClient)
+	_, err := evalSrv.ToEvalReady(context.Background(), req, client.WithAddress(addr))
+	if err != nil {
+		logger.Infof("ToEvalReady error %+v", err)
 	} else {
 		//logger.Infof("ToEval result %+v", evalRsp)
 	}

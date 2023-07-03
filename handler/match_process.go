@@ -243,6 +243,15 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 	for i := 0; i < cc; i++ {
 		tmpList[i] = i
 	}
+	evalReadyReq := &match_evaluator.ToEvalReadyReq{
+		GameId:             req.GameId,
+		SubType:            req.SubType,
+		Version:            req.Version,
+		EvalGroupId:        req.EvalGroupId,
+		EvalGroupTaskCount: req.EvalGroupTaskCount,
+		EvalGroupSubId:     req.EvalGroupSubId,
+	}
+	process.DefaultManager.AddEvalReadyOpt(evalReadyReq, req.EvalhaskKey)
 	go func() {
 		ret, remind := groupWithinOffsetAndMaxCount(tmpList, mList, scoreMaxOffset, int(req.NeedCount), int(req.NeedCount), req.GameId)
 		if len(remind) > 0 {
