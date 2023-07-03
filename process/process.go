@@ -8,4 +8,5 @@ type Manager interface {
 	Start() error
 	Stop() error
 	AddEvalOpt(req *match_evaluator.ToEvalReq, key string)
+	AddEvalReadyOpt(req *match_evaluator.ToEvalReadyReq, key string)
 }
