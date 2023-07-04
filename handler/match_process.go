@@ -104,10 +104,12 @@ func (m *matchList) GetDetail(i int) (float64, bool) {
 			for pos, idd := range m.list[st:ed] {
 				infer := rr[pos]
 				if infer == nil {
+					deleteIds = append(deleteIds, idd)
 					continue
 				}
 				str, ok := rr[pos].([]byte)
 				if !ok {
+					deleteIds = append(deleteIds, idd)
 					continue
 				}
 				matchInfo := utils.Bytes2string(str)
