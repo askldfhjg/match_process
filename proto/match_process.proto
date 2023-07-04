@@ -21,6 +21,7 @@ message MatchTaskReq {
 	string evalhaskKey = 10; //后置优化服务器hashstring
 	int64 needCount = 11;
 	int64 version = 12;
+	int64 startTime = 13;
 }
 
 message MatchTaskRsp {
