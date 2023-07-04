@@ -271,6 +271,8 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 			EvalGroupId:        req.EvalGroupId,
 			EvalGroupTaskCount: req.EvalGroupTaskCount,
 			EvalGroupSubId:     req.EvalGroupSubId,
+			StartTime:          req.StartTime,
+			RunTime:            now - st,
 		}
 		process.DefaultManager.AddEvalOpt(evalReq, req.EvalhaskKey)
 	}()
