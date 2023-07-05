@@ -143,10 +143,16 @@ func (m matchList) Count() int {
 	return len(m.list)
 }
 
-func (m matchList) GetPlayerIds(poss []int) []string {
-	rr := make([]string, len(poss))
+func (m matchList) GetPlayerIds(poss []int, maxCount int) []string {
+	rr := make([]string, maxCount)
 	for idx, pos := range poss {
 		rr[idx] = m.list[pos]
+	}
+	cc := len(rr)
+	if cc < maxCount {
+		for i := 0; i < maxCount-cc; i++ {
+			rr[cc+i] = "robot"
+		}
 	}
 	return rr
 }
@@ -182,9 +188,9 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 		return max-min < float64(maxOffset)
 	}
 
-	processResult := func(tmp []int, mList *matchList, gameId string) *match_evaluator.MatchDetail {
+	processResult := func(tmp []int, mList *matchList, maxCount int) *match_evaluator.MatchDetail {
 		ret := &match_evaluator.MatchDetail{
-			Ids: mList.GetPlayerIds(tmp),
+			Ids: mList.GetPlayerIds(tmp, maxCount),
 		}
 		return ret
 	}
@@ -205,9 +211,9 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 		} else {
 			cc := len(currentGroup)
 			if cc >= maxCount {
-				groups = append(groups, processResult(currentGroup, mList, gameId))
+				groups = append(groups, processResult(currentGroup, mList, maxCount))
 			} else if cc >= robotCount {
-				groups = append(groups, processResult(currentGroup, mList, gameId))
+				groups = append(groups, processResult(currentGroup, mList, maxCount))
 			} else {
 				remind = append(remind, currentGroup...)
 			}
@@ -220,9 +226,9 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 
 	cc := len(currentGroup)
 	if cc >= maxCount {
-		groups = append(groups, processResult(currentGroup, mList, gameId))
+		groups = append(groups, processResult(currentGroup, mList, maxCount))
 	} else if cc >= robotCount {
-		groups = append(groups, processResult(currentGroup, mList, gameId))
+		groups = append(groups, processResult(currentGroup, mList, maxCount))
 	} else {
 		remind = append(remind, currentGroup...)
 	}
