@@ -184,9 +184,7 @@ func groupWithinOffsetAndMaxCount(playerIds []int, mList *matchList, maxOffset, 
 
 	processResult := func(tmp []int, mList *matchList, gameId string) *match_evaluator.MatchDetail {
 		ret := &match_evaluator.MatchDetail{
-			Ids:    mList.GetPlayerIds(tmp),
-			GameId: gameId,
-			Score:  mList.CalcScore(tmp),
+			Ids: mList.GetPlayerIds(tmp),
 		}
 		return ret
 	}
