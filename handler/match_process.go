@@ -64,6 +64,7 @@ func newMatchList(req *match_process.MatchTaskReq) (*matchList, error) {
 		}
 		index += 2
 	}
+	//logger.Infof("ffffff %+v", len(scoreMap))
 	// for _, info := range li {
 	// 	playerId := info.Member.(string)
 	// 	score := info.Score

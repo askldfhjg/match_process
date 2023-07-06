@@ -25,7 +25,7 @@ func (m *redisBackend) GetTokenList(ctx context.Context, info *match_process.Mat
 	defer handleConnectionClose(&redisConn)
 
 	zsetKey := fmt.Sprintf(allTickets, info.GameId, info.SubType)
-	reply, err := redisConn.Do("ZRANGE", zsetKey, info.StartPos-1, info.EndPos-1, "WITHSCORES")
+	reply, err := redisConn.Do("ZRANGEBYSCORE", zsetKey, info.StartPos, info.EndPos, "WITHSCORES")
 	if err == redis.ErrNil {
 		return nil, nil
 	}
