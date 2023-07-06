@@ -146,13 +146,11 @@ func (m matchList) Count() int {
 
 func (m matchList) GetPlayerIds(poss []int, maxCount int) []string {
 	rr := make([]string, maxCount)
-	for idx, pos := range poss {
-		rr[idx] = m.list[pos]
-	}
-	cc := len(rr)
-	if cc < maxCount {
-		for i := 0; i < maxCount-cc; i++ {
-			rr[cc+i] = "robot"
+	for i := 0; i < maxCount; i++ {
+		if i < len(poss) {
+			rr[i] = m.list[poss[i]]
+		} else {
+			rr[i] = "robot"
 		}
 	}
 	return rr
