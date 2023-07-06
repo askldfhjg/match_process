@@ -98,40 +98,40 @@ func (m *matchList) GetDetail(i int) (float64, bool) {
 		}
 		rr, err := db.Default.GetTokenDetail(context.Background(), m.list[st:ed])
 		//logger.Infof("GetTokenDetail %d %d", st, ed)
-		deleteIds := make([]string, 0, 64)
+		//deleteIds := make([]string, 0, 64)
 		//var deleteIds []string
 		m.index = ed
 		if err == nil {
 			for pos, idd := range m.list[st:ed] {
 				infer := rr[pos]
 				if infer == nil {
-					deleteIds = append(deleteIds, idd)
+					//deleteIds = append(deleteIds, idd)
 					continue
 				}
 				str, ok := rr[pos].([]byte)
 				if !ok {
-					deleteIds = append(deleteIds, idd)
+					//deleteIds = append(deleteIds, idd)
 					continue
 				}
 				matchInfo := utils.Bytes2string(str)
 				if matchInfo == m.nowMatch {
 					m.result[idd] = true
 				} else {
-					deleteIds = append(deleteIds, idd)
+					//deleteIds = append(deleteIds, idd)
 				}
 			}
-			if len(deleteIds) > 0 {
-				logger.Infof("GetDetail %s %d %d remove miss count %d range %d %d", m.gameId, m.subType, m.SubId, len(deleteIds), st, ed)
-				_, err := db.Default.RemoveMissTokens(context.Background(), deleteIds, m.gameId, m.subType)
-				if err != nil {
-					logger.Errorf("GetDetail %s %d $d remove miss have error %s", m.gameId, m.subType, m.SubId, err.Error())
-				}
-				// else {
-				// 	if deleteCount != len(deleteIds) {
-				// 		logger.Errorf("GetDetail %s %d %d remove miss delete not match %d %d range %d %d", m.gameId, m.subType, m.SubId, deleteCount, len(deleteIds), st, ed)
-				// 	}
-				// }
-			}
+			// if len(deleteIds) > 0 {
+			// 	logger.Infof("GetDetail %s %d %d remove miss count %d range %d %d", m.gameId, m.subType, m.SubId, len(deleteIds), st, ed)
+			// 	_, err := db.Default.RemoveMissTokens(context.Background(), deleteIds, m.gameId, m.subType)
+			// 	if err != nil {
+			// 		logger.Errorf("GetDetail %s %d $d remove miss have error %s", m.gameId, m.subType, m.SubId, err.Error())
+			// 	}
+			// 	// else {
+			// 	// 	if deleteCount != len(deleteIds) {
+			// 	// 		logger.Errorf("GetDetail %s %d %d remove miss delete not match %d %d range %d %d", m.gameId, m.subType, m.SubId, deleteCount, len(deleteIds), st, ed)
+			// 	// 	}
+			// 	// }
+			// }
 		} else {
 			logger.Errorf("GetDetail redis error %s", err.Error())
 		}
@@ -151,6 +151,18 @@ func (m matchList) GetPlayerIds(poss []int, maxCount int) []string {
 			rr[i] = m.list[poss[i]]
 		} else {
 			rr[i] = "robot"
+		}
+	}
+	return rr
+}
+
+func (m matchList) GetIds(poss []int) map[string]int32 {
+	rr := make(map[string]int32)
+	for _, pos := range poss {
+		idd := m.list[pos]
+		score := m.scoreMap[idd]
+		if score > 0 {
+			rr[idd] = int32(score)
 		}
 	}
 	return rr
@@ -249,23 +261,26 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 	for i := 0; i < cc; i++ {
 		tmpList[i] = i
 	}
-	evalReadyReq := &match_evaluator.ToEvalReadyReq{
-		GameId:             req.GameId,
-		SubType:            req.SubType,
-		Version:            req.Version,
-		EvalGroupId:        req.EvalGroupId,
-		EvalGroupTaskCount: req.EvalGroupTaskCount,
-		EvalGroupSubId:     req.EvalGroupSubId,
-	}
-	process.DefaultManager.AddEvalReadyOpt(evalReadyReq, req.EvalhaskKey)
+	// evalReadyReq := &match_evaluator.ToEvalReadyReq{
+	// 	GameId:             req.GameId,
+	// 	SubType:            req.SubType,
+	// 	Version:            req.Version,
+	// 	EvalGroupId:        req.EvalGroupId,
+	// 	EvalGroupTaskCount: req.EvalGroupTaskCount,
+	// 	EvalGroupSubId:     req.EvalGroupSubId,
+	// 	OldVersion:         req.OldVersion,
+	// }
+	// process.DefaultManager.AddEvalReadyOpt(evalReadyReq, req.EvalhaskKey)
 	go func() {
+		var remindold []int
+		var ret1 []*match_evaluator.MatchDetail
 		ret, remind := groupWithinOffsetAndMaxCount(tmpList, mList, scoreMaxOffset, int(req.NeedCount), int(req.NeedCount), req.GameId)
 		if len(remind) > 0 {
-			ret1, _ := groupWithinOffsetAndMaxCount(remind, mList, scoreMaxOffset*3, int(req.NeedCount), int(float64(req.NeedCount)*0.8), req.GameId)
+			ret1, remindold = groupWithinOffsetAndMaxCount(remind, mList, scoreMaxOffset*3, int(req.NeedCount), int(float64(req.NeedCount)*0.8), req.GameId)
 			ret = append(ret, ret1...)
 		}
 		now := time.Now().UnixNano() / 1e6
-		logger.Infof("process %s %d ok count %d timer %d %d", req.EvalGroupId, req.EvalGroupSubId, len(ret), now, now-st)
+		logger.Infof("process %s %d ok count %d move %d timer %d %d", req.EvalGroupId, req.EvalGroupSubId, len(ret), len(remind), now, now-st)
 		evalReq := &match_evaluator.ToEvalReq{
 			Details:            ret,
 			TaskId:             req.TaskId,
@@ -278,6 +293,8 @@ func (e *Match_process) MatchTask(ctx context.Context, req *match_process.MatchT
 			EvalGroupSubId:     req.EvalGroupSubId,
 			StartTime:          req.StartTime,
 			RunTime:            now - st,
+			OldVersion:         req.OldVersion,
+			MoveList:           mList.GetIds(remindold),
 		}
 		process.DefaultManager.AddEvalOpt(evalReq, req.EvalhaskKey)
 	}()

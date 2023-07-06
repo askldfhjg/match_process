@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	allTickets = "allTickets:%s:%d"
+	allTickets = "allTickets:%d:%s:%d"
 	ticketKey  = "ticket:"
 	hashKey    = "hashkey:"
 )
@@ -24,7 +24,7 @@ func (m *redisBackend) GetTokenList(ctx context.Context, info *match_process.Mat
 	}
 	defer handleConnectionClose(&redisConn)
 
-	zsetKey := fmt.Sprintf(allTickets, info.GameId, info.SubType)
+	zsetKey := fmt.Sprintf(allTickets, info.OldVersion, info.GameId, info.SubType)
 	reply, err := redisConn.Do("ZRANGEBYSCORE", zsetKey, info.StartPos, info.EndPos, "WITHSCORES")
 	if err == redis.ErrNil {
 		return nil, nil
@@ -82,18 +82,18 @@ func (m *redisBackend) SetEvalUrl(ctx context.Context, hashkey string, url strin
 	return redis.String(redisConn.Do("EVAL", params...))
 }
 
-func (m *redisBackend) RemoveMissTokens(ctx context.Context, playerIds []string, gameId string, subType int64) (int, error) {
-	redisConn, err := m.redisPool.GetContext(ctx)
-	if err != nil {
-		return 0, err
-	}
-	defer handleConnectionClose(&redisConn)
-	zsetKey := fmt.Sprintf(allTickets, gameId, subType)
+// func (m *redisBackend) RemoveMissTokens(ctx context.Context, playerIds []string, gameId string, subType int64) (int, error) {
+// 	redisConn, err := m.redisPool.GetContext(ctx)
+// 	if err != nil {
+// 		return 0, err
+// 	}
+// 	defer handleConnectionClose(&redisConn)
+// 	zsetKey := fmt.Sprintf(allTickets, gameId, subType)
 
-	inter2 := make([]interface{}, len(playerIds)+1)
-	inter2[0] = zsetKey
-	for pos, ply := range playerIds {
-		inter2[pos+1] = ply
-	}
-	return redis.Int(redisConn.Do("ZREM", inter2...))
-}
+// 	inter2 := make([]interface{}, len(playerIds)+1)
+// 	inter2[0] = zsetKey
+// 	for pos, ply := range playerIds {
+// 		inter2[pos+1] = ply
+// 	}
+// 	return redis.Int(redisConn.Do("ZREM", inter2...))
+// }

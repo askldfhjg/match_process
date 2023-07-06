@@ -15,7 +15,7 @@ type Service interface {
 	GetTokenList(ctx context.Context, info *match_process.MatchTaskReq) ([]interface{}, error)
 	GetTokenDetail(ctx context.Context, ids []string) ([]interface{}, error)
 	SetEvalUrl(ctx context.Context, hashkey string, url string) (string, error)
-	RemoveMissTokens(ctx context.Context, playerIds []string, gameId string, subType int64) (int, error)
+	//RemoveMissTokens(ctx context.Context, playerIds []string, gameId string, subType int64) (int, error)
 }
 
 type MatchInfo struct {

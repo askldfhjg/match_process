@@ -22,6 +22,7 @@ message MatchTaskReq {
 	int64 needCount = 11;
 	int64 version = 12;
 	int64 startTime = 13;
+	int64 oldVersion = 14;
 }
 
 message MatchTaskRsp {
@@ -33,4 +34,5 @@ message PoolVersionMsg {
 	string gameId = 1; //游戏Id
 	int64 subType = 2; //匹配模式Id
 	int64 version = 3;
+	int64 oldVersion = 4;
 }
