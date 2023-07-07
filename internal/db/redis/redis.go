@@ -75,7 +75,7 @@ func (m *redisBackend) SetEvalUrl(ctx context.Context, hashkey string, url strin
 	end
 	`
 	args := []interface{}{url}
-	keys := []interface{}{fmt.Sprintf(hashKey, hashkey)}
+	keys := []interface{}{hashKey + hashkey}
 	params := []interface{}{script, len(keys)}
 	params = append(params, keys...)
 	params = append(params, args...)
